@@ -20,57 +20,47 @@ type C = layout.Context
 type D = layout.Dimensions
 
 func main() {
-	serverURL := "ws://localhost:3000/ws" // Replace with your WebSocket server URL
-	ws, errWs := websocket.Dial(serverURL, "", "http://localhost/")
+	serverURL := "ws://localhost:8000/ws" // Replace with your WebSocket server URL
+	ws, errWs := websocket.Dial(serverURL, "", "ws://localhost:3001")
 	if errWs != nil {
 		log.Fatal("Error connecting to WebSocket server:", errWs)
 	}
-	defer ws.Close()
-
-	// Start a goroutine to handle incoming messages
-	// go func() {
-	// 	var response = make([]byte, 1024)
-	// 	for {
-	// 		n, err := ws.Read(response)
-	// 		if err != nil {
-	// 			log.Println("Error reading message:", err)
-	// 			return
-	// 		}
-	// 		fmt.Printf("Received message: %s\n", response[:n])
-	// 	}
-	// }()
 
 	// Send a message to the WebSocket server
-	msg := "Hello, WebSocket server!"
-	_, errWs = ws.Write([]byte(msg))
-	if errWs != nil {
-		log.Println("Error sending message:", errWs)
-		return
-	}
+	// msg := "Hello, WebSocket server!"
+	// _, errWs = ws.Write([]byte(msg))
+	// if errWs != nil {
+	// 	log.Println("Error sending message:", errWs)
+	// 	return
+	// }
 
 	// Keep the main goroutine alive
-
+	var response = make([]byte, 1024)
 	go func() {
 		// create new window
 		w := new(app.Window)
 		w.Option(app.Title("IrcClient"))
 		w.Option(app.Size(unit.Dp(400), unit.Dp(600)))
-		if err := draw(w, ws); err != nil {
+		if err := draw(w, ws, response); err != nil {
 			log.Fatal(err)
 		}
 		os.Exit(0)
 	}()
 	app.Main()
+	defer ws.Close()
 }
 
-func draw(w *app.Window, ws *websocket.Conn) error {
+func draw(w *app.Window, ws *websocket.Conn, response []byte) error {
 	// ...
 	var ops op.Ops
 	var sendButton widget.Clickable
 	var textInput widget.Editor
+	var msgs []string
 
 	// th defines the material design style
 	th := material.NewTheme()
+
+	var pastText string
 
 	// listen for events in the window.
 	for {
@@ -81,10 +71,26 @@ func draw(w *app.Window, ws *websocket.Conn) error {
 		// this is sent when the application should re-render.
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, typ)
-			if sendButton.Clicked(gtx) {
-				fmt.Println(strings.TrimSpace(textInput.Text()))
-				sendMessage(ws, strings.TrimSpace(textInput.Text()))
+			// if sendButton.Clicked(gtx) {
+			// 	fmt.Println(strings.TrimSpace(textInput.Text()))
+			// 	sendMessage(ws, strings.TrimSpace(textInput.Text()))
+			// }
+			go func(ws *websocket.Conn) {
+				n, err := ws.Read(response)
+				if err != nil {
+					log.Println("Error reading message:", err)
+				}
+				fmt.Printf("Received message: %s\n", response[:n])
+				var newMsg = string(response)
+				msgs = append(msgs, newMsg)
+				fmt.Println(newMsg)
+			}(ws)
+
+			if pastText != strings.TrimSpace(textInput.Text()) {
+				pastText = strings.TrimSpace(textInput.Text())
+				sendMessage(ws, pastText)
 			}
+
 			// Let's try out the flexbox layout:
 			layout.Flex{
 				// Vertical alignment, from top to bottom
