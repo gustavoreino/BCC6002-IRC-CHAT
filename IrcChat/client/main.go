@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
-
+	"gioui.org/text"
 	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -18,6 +18,19 @@ import (
 
 type C = layout.Context
 type D = layout.Dimensions
+
+type Message struct{
+	authorId string
+	paragraph string
+}
+
+func(m *Message) Layout(gtx C, th *material.Theme) D{
+	paragraph := material.Label(th, unit.Sp(float32(12)), m.paragraph)
+	// The text is centered
+	paragraph.Alignment = text.Middle
+	// Return the laid out paragraph
+	return paragraph.Layout(gtx)
+}
 
 func main() {
 	serverURL := "ws://localhost:8000/ws" // Replace with your WebSocket server URL
@@ -55,7 +68,13 @@ func draw(w *app.Window, ws *websocket.Conn, response []byte) error {
 	var ops op.Ops
 	var sendButton widget.Clickable
 	var textInput widget.Editor
+
 	var msgs []string
+	var listItems []Message
+	listItems = append(listItems, Message{authorId: "",paragraph: "hello :)"})
+	listItems = append(listItems, Message{authorId: "",paragraph: "hello >:)"})
+	listItems = append(listItems, Message{authorId: "",paragraph: "hello :D"})
+
 
 	// th defines the material design style
 	th := material.NewTheme()
@@ -98,6 +117,32 @@ func draw(w *app.Window, ws *websocket.Conn, response []byte) error {
 				// Empty space is left at the start, i.e. at the top
 				Spacing: layout.SpaceStart,
 			}.Layout(gtx,
+                layout.Rigid(
+					func(gtx C) D {
+						var msgList = layout.List{
+							Axis: layout.Vertical,
+							Position: layout.Position{
+							  Offset: int(0),
+							},}
+						margins := layout.Inset{
+							Top:    unit.Dp(25),
+							Bottom: unit.Dp(25),
+							Right:  unit.Dp(35),
+							Left:   unit.Dp(35),
+						}
+						return margins.Layout(gtx,
+							func(gtx C) D {
+							  // 2) ... then the list inside those margins ...
+								return msgList.Layout(gtx, len(listItems),
+									// 3) ... where each paragraph is a separate item
+									func(gtx C, index int) D {
+										return listItems[index].Layout(gtx,th)
+									},
+								)
+							},
+						)
+					},
+				),
 				layout.Rigid(
 					func(gtx C) D {
 						// Wrap the editor in material design
