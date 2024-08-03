@@ -25,9 +25,10 @@ type Message struct{
 }
 
 func(m *Message) Layout(gtx C, th *material.Theme) D{
-	paragraph := material.Label(th, unit.Sp(float32(12)), m.paragraph)
+	msgBox := m.authorId + ": " + m.paragraph 
+	paragraph := material.Label(th, unit.Sp(float32(16)), msgBox)
 	// The text is centered
-	paragraph.Alignment = text.Middle
+	paragraph.Alignment = text.Start
 	// Return the laid out paragraph
 	return paragraph.Layout(gtx)
 }
@@ -71,9 +72,9 @@ func draw(w *app.Window, ws *websocket.Conn, response []byte) error {
 
 	var msgs []string
 	var listItems []Message
-	listItems = append(listItems, Message{authorId: "",paragraph: "hello :)"})
-	listItems = append(listItems, Message{authorId: "",paragraph: "hello >:)"})
-	listItems = append(listItems, Message{authorId: "",paragraph: "hello :D"})
+	// listItems = append(listItems, Message{authorId: "Perry",paragraph: "hello :)"})
+	// listItems = append(listItems, Message{authorId: "Kyle",paragraph: "hello >:)"})
+	// listItems = append(listItems, Message{authorId: "Dood",paragraph: "hello :D"})
 
 
 	// th defines the material design style
@@ -100,8 +101,9 @@ func draw(w *app.Window, ws *websocket.Conn, response []byte) error {
 					log.Println("Error reading message:", err)
 				}
 				fmt.Printf("Received message: %s\n", response[:n])
-				var newMsg = string(response)
+				var newMsg = string(response[:n])
 				msgs = append(msgs, newMsg)
+				listItems = append(listItems, Message{authorId: "Anon",paragraph: newMsg})
 				fmt.Println(newMsg)
 			}(ws)
 
